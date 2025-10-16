@@ -2,25 +2,174 @@
 <html lang="es">
 <head>
   <meta charset="utf-8" />
-  <title>AI Megafy - COMEX (con archivos)</title>
+  <title>AI Megafy - COMEX</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- ChatKit -->
+  <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js" defer></script>
+
   <style>
-    :root{ --w: 980px; }
-    *{ box-sizing: border-box; }
-    body{ margin:0; font-family: system-ui, sans-serif; background:#fff; color:#222; }
-    header{ background: linear-gradient(180deg,#0b1b2f,#0a1422); color:#e8eef7; padding:24px 0 40px; box-shadow:0 6px 24px rgba(0,0,0,.25); }
-    .brand{ max-width:var(--w); margin:0 auto; display:flex; gap:14px; align-items:center; padding:0 16px;}
-    .brand img{ height:46px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
-    .brand h1{ margin:0; font-size:1.4rem; }
-    .sub{ color:#c3cde0; }
-    main{ max-width:var(--w); margin:-16px auto 40px; padding:20px; border:1px solid #eee; border-radius:16px; background:#fff; box-shadow:0 10px 30px rgba(0,0,0,.1);}
-    .row{ display:flex; gap:12px; align-items:center; margin-bottom:12px; flex-wrap:wrap;}
-    #msg{ flex:1; padding:10px 12px; border:1px solid #ddd; border-radius:10px; font-size:16px; min-width:280px;}
-    button{ padding:10px 14px; border-radius:10px; border:1px solid #ddd; background:#0f66ff; color:#fff; font-weight:600; cursor:pointer; }
-    button.secondary{ background:#f5f7fb; color:#0a2440; border-color:#d9e0ef; }
-    #out{ border:1px solid #eee; border-radius:12px; padding:12px; background:#fafafa; min-height:160px; white-space:pre-wrap; }
-    .hint{ color:#666; font-size:14px; }
-    .chip{ display:inline-block; padding:6px 10px; border-radius:999px; background:#eef5ff; border:1px solid #dbe7ff; color:#0a2440; font-size:12px; margin-right:6px; }
+    :root {
+      --w: 1000px;
+      --header-bg: linear-gradient(180deg, #0b1b2f 0%, #0a1422 100%);
+      --text-light: #e8eef7;
+      --text-dark: #222;
+      --muted: #6b7583;
+      --accent: #4cc2ff;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #fff;              /* fondo blanco global */
+      color: var(--text-dark);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      padding: 0 24px 40px;
+      min-height: 100vh;
+    }
+
+    /* ===== Encabezado oscuro con FADE hacia blanco ===== */
+    header {
+      width: 100%;
+      background: var(--header-bg);
+      color: var(--text-light);
+      display: flex;
+      justify-content: center;
+      padding: 24px 0 48px;  /* un poco más de padding inferior para lucir el fade */
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      position: relative;     /* para posicionar el pseudo-elemento */
+      overflow: visible;
+      isolation: isolate;     /* asegura mezcla correcta del fade */
+    }
+    header::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: -40px;
+      height: 80px;
+      pointer-events: none;
+      background: linear-gradient(
+        to bottom,
+        rgba(10, 20, 34, 0.85) 0%,
+        rgba(10, 20, 34, 0.35) 35%,
+        rgba(10, 20, 34, 0.12) 60%,
+        rgba(10, 20, 34, 0.00) 100%
+      );
+      opacity: 0;
+      transform: translateY(8px);
+      animation: fadeDown 600ms ease-out forwards 80ms;
+    }
+    @keyframes fadeDown {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: var(--w);
+      padding: 0 16px;
+    }
+    .brand img { height: 46px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4)); }
+    .brand h1 { font-size: 1.4rem; font-weight: 600; }
+    .sub { font-size: 0.95rem; color: #c3cde0; }
+
+    /* Tarjeta del chat */
+    .card {
+      width: 100%;
+      max-width: var(--w);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      border: 1px solid #eee;
+      padding: 24px;
+      margin-top: -16px;  /* solapa bajo el fade para continuidad */
+      position: relative;
+      z-index: 0;
+    }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+    }
+    .status {
+      font-size: 0.9rem;
+      color: #2e7d32;
+      font-weight: 500;
+    }
+    .status .dot {
+      width: 10px; height: 10px;
+      display: inline-block;
+      border-radius: 50%;
+      margin-right: 6px;
+      background: #2e7d32;
+      box-shadow: 0 0 6px #2e7d32aa;
+    }
+    .badge {
+      font-size: 0.8rem;
+      background: var(--accent);
+      color: #00233f;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    /* Host del ChatKit embebido */
+    openai-chatkit {
+      display: block;
+      width: 100%;
+      height: clamp(520px, 70vh, 720px);
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      background: #fafafa;
+    }
+
+    /* Bloque de subida guiado */
+    #uploadBlock {
+      display: none;
+      margin-top: 12px;
+      border: 1px solid #eee;
+      border-radius: 10px;
+      padding: 12px;
+      background: #f9fbff;
+    }
+    #uploadBlock .title {
+      font-weight: 600; margin-bottom: 6px;
+    }
+    #uploadForm {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    #uploadForm input[type="file"] {
+      border: 1px solid #dbe7ff; border-radius: 8px; padding: 6px; background: #fff;
+    }
+    #btnUpload, #btnCopy {
+      padding: 8px 12px; border-radius: 10px; border: 1px solid #dbe7ff; cursor: pointer;
+      background: #0f66ff; color: #fff; font-weight: 600;
+    }
+    #btnCopy { background: #eef5ff; color: #0a2440; }
+    #uploadResult { margin-top: 8px; font-size: 14px; color: #0a2440; }
+    #fileTagRow { display: none; margin-top: 8px; }
+    #fileTag {
+      width: 100%; padding: 8px; border: 1px solid #dbe7ff; border-radius: 8px; background: #fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+
+    @media (max-width: 560px) {
+      .brand h1 { font-size: 1.15rem; }
+      .sub { font-size: 0.85rem; }
+      .card { padding: 16px; }
+    }
   </style>
 </head>
 <body>
@@ -29,82 +178,136 @@
       <img src="https://megafy.net/wp-content/uploads/2022/06/logo-megafy-footer.png" alt="Logo Megafy" />
       <div>
         <h1>AI Megafy - COMEX</h1>
-        <div class="sub">Tu copiloto inteligente, con soporte de archivos PDF</div>
+        <div class="sub">Tu copiloto inteligente, 24/7</div>
+        <!-- Si quieres, aquí podrías añadir un botón a Hosted Chat en el futuro -->
       </div>
     </div>
   </header>
 
-  <main>
-    <div class="row">
-      <input id="file" type="file" accept="application/pdf" />
-      <button class="secondary" id="btnUpload">Subir PDF</button>
-      <span id="filesList"></span>
+  <div class="card">
+    <div class="card-head">
+      <div class="status"><span class="dot"></span>Disponible</div>
+      <div class="badge">Beta</div>
     </div>
 
-    <div class="row">
-      <input id="msg" placeholder="Escribe tu consulta..." />
-      <button id="btnSend">Enviar</button>
-    </div>
+    <!-- Chat embebido -->
+    <openai-chatkit id="chat"></openai-chatkit>
 
-    <div class="hint">Puedes subir uno o varios PDFs. Luego escribe tu pregunta haciendo referencia a ellos.</div>
-    <div style="margin:10px 0">
-      <span class="chip">PDFs admitidos</span>
-      <span class="chip">Modelo: <code id="modelName">—</code></span>
+    <!-- Bloque de subida (oculto hasta que el asistente lo pida con [[UPLOAD_REQUIRED]]) -->
+    <div id="uploadBlock">
+      <div class="title">Subir PDF solicitado por el asistente</div>
+      <form id="uploadForm">
+        <input id="pdfInput" type="file" accept="application/pdf" />
+        <button id="btnUpload" type="submit">Subir PDF</button>
+      </form>
+      <div id="uploadResult"></div>
+      <div id="fileTagRow">
+        <input id="fileTag" readonly />
+        <button id="btnCopy">Copiar y pegar en el chat</button>
+        <div style="font-size:12px; color:#555; margin-top:6px">
+          Pega ese texto en el cuadro del chat y envíalo para continuar el flujo.
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div id="out"></div>
-  </main>
+  <footer>Desarrollado con 🧠 x Megafy</footer>
 
   <script type="module">
-    const out = document.getElementById('out');
-    const fileInput = document.getElementById('file');
-    const filesList = document.getElementById('filesList');
-    const modelNameEl = document.getElementById('modelName');
+    await customElements.whenDefined('openai-chatkit');
 
-    // Estado en memoria: file_ids acumulados en esta sesión
-    const state = { fileIds: [] };
+    // Token para el widget
+    async function getClientSecret(existing) {
+      const url = existing ? "/api/chatkit/refresh" : "/api/chatkit/start";
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: existing ? JSON.stringify({ currentClientSecret: existing }) : null
+      });
+      if (!res.ok) throw new Error(`Token ${res.status}: ${await res.text()}`);
+      const { client_secret } = await res.json();
+      if (!client_secret) throw new Error("Sin client_secret");
+      return client_secret;
+    }
 
-    // (Opcional) mostrar el modelo activo desde el backend
-    fetch('/api/message', { method:'OPTIONS' }).then(r => r.json().catch(()=>({}))).then(j=>{
-      if (j?.model) modelNameEl.textContent = j.model;
-    }).catch(()=>{});
+    const chat = document.getElementById("chat");
+    chat.setOptions({
+      api: { getClientSecret },
+      locale: "es-ES"
+    });
 
-    document.getElementById('btnUpload').onclick = async () => {
-      const f = fileInput.files?.[0];
-      if (!f) return alert('Selecciona un PDF primero');
+    /* ===== Lógica de subida paso-guiado ===== */
+
+    // Referencias UI
+    const uploadBlock  = document.getElementById('uploadBlock');
+    const uploadForm   = document.getElementById('uploadForm');
+    const pdfInput     = document.getElementById('pdfInput');
+    const uploadResult = document.getElementById('uploadResult');
+    const fileTagRow   = document.getElementById('fileTagRow');
+    const fileTagInput = document.getElementById('fileTag');
+    const btnCopy      = document.getElementById('btnCopy');
+
+    // 1) Mostrar/ocultar uploader según el MENSAJE del asistente
+    //    Requiere que el mensaje del agente incluya [[UPLOAD_REQUIRED]]
+    chat.addEventListener('chatkit.state', (evt) => {
+      try {
+        const messages = evt.detail?.messages || [];
+        const last = [...messages].reverse().find(m => m?.role === 'assistant' && typeof m?.content === 'string');
+        if (!last) return;
+        const needsUpload = last.content.includes('[[UPLOAD_REQUIRED]]');
+        uploadBlock.style.display = needsUpload ? 'block' : 'none';
+        if (!needsUpload) {
+          uploadResult.textContent = '';
+          fileTagRow.style.display = 'none';
+          fileTagInput.value = '';
+          pdfInput.value = '';
+        }
+      } catch {}
+    });
+
+    // 2) Subir PDF a tu backend (/api/upload)
+    uploadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = pdfInput.files?.[0];
+      if (!f) { uploadResult.textContent = 'Selecciona un PDF.'; return; }
+      uploadResult.textContent = 'Subiendo PDF…';
+      fileTagRow.style.display = 'none';
+
       const fd = new FormData();
       fd.append('file', f);
-      out.textContent = 'Subiendo PDF…';
-      const r = await fetch('/api/upload', { method:'POST', body: fd });
-      const j = await r.json().catch(()=>null);
-      if (!r.ok) {
-        out.textContent = `Error al subir: ${await r.text()}`;
-        return;
+      try {
+        const r = await fetch('/api/upload', { method:'POST', body: fd });
+        if (!r.ok) {
+          uploadResult.textContent = `Error al subir: ${await r.text()}`;
+          return;
+        }
+        const { file_id, name } = await r.json();
+        uploadResult.textContent = `PDF "${name || f.name}" subido correctamente.`;
+        // 3) Genera el tag para pegar en el chat
+        const tag = `[[FILE:${file_id}]]`;
+        fileTagInput.value = tag;
+        fileTagRow.style.display = 'block';
+      } catch (err) {
+        uploadResult.textContent = `Error de red: ${err?.message || err}`;
       }
-      state.fileIds.push(j.file_id);
-      filesList.textContent = `(${state.fileIds.length} archivo(s) listo(s))`;
-      out.textContent = 'PDF subido correctamente. Ahora puedes preguntar.';
-      fileInput.value = '';
-    };
+    });
 
-    document.getElementById('btnSend').onclick = async () => {
-      const text = document.getElementById('msg').value.trim();
-      if (!text && state.fileIds.length === 0) return alert('Escribe un mensaje o sube un PDF');
-      out.textContent = 'Pensando…';
-      const r = await fetch('/api/message', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ text, file_ids: state.fileIds })
-      });
-      if (!r.ok) {
-        out.textContent = `Error: ${await r.text()}`;
-        return;
+    // 3) Copiar el tag al portapapeles
+    btnCopy.addEventListener('click', async (e) => {
+      e.preventDefault();
+      if (!fileTagInput.value) return;
+      try {
+        await navigator.clipboard.writeText(fileTagInput.value);
+        btnCopy.textContent = '¡Copiado! Pega en el chat y envía';
+        setTimeout(()=> btnCopy.textContent = 'Copiar y pegar en el chat', 2000);
+      } catch {
+        fileTagInput.select(); document.execCommand('copy');
       }
-      const j = await r.json();
-      out.textContent = j.reply || '(sin respuesta)';
-      // Si quieres “conversación”, conserva estado y no limpies fileIds
-      document.getElementById('msg').value = '';
-    };
+    });
+
+    // (Opcional) logs por consola
+    chat.addEventListener('chatkit.ready', () => console.log('✅ chatkit.ready'));
+    chat.addEventListener('chatkit.error', (e) => console.error('❌ chatkit.error', e.detail || e));
   </script>
 </body>
 </html>
