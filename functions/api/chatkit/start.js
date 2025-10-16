@@ -3,7 +3,7 @@ export async function onRequestPost({ request, env }) {
     if (!env.OPENAI_API_KEY) return new Response('Missing OPENAI_API_KEY', { status: 500 });
     if (!env.CHATKIT_WORKFLOW_ID) return new Response('Missing CHATKIT_WORKFLOW_ID', { status: 500 });
 
-    // Identidad de usuario (cookie) para mantener la sesión
+    // user id persistido en cookie (1 año)
     const cookie = request.headers.get('Cookie') || '';
     const match  = cookie.match(/(?:^|;\s*)megafy_uid=([^;]+)/);
     const uid    = match ? decodeURIComponent(match[1]) : `web-${crypto.randomUUID()}`;
@@ -11,17 +11,7 @@ export async function onRequestPost({ request, env }) {
     const body = {
       workflow: { id: env.CHATKIT_WORKFLOW_ID },
       ...(env.CHATKIT_WORKFLOW_VERSION ? { version: env.CHATKIT_WORKFLOW_VERSION } : {}),
-      user: uid,
-      // 👇 Habilita capacidad de adjuntos en la sesión
-      capabilities: {
-        attachments: {
-          enabled: true,
-          // opcional: restringe tipos si quieres
-          accept: ["application/pdf", "image/*", "text/plain"],
-          multiple: true,
-          max_files: 5
-        }
-      }
+      user: uid
     };
 
     const r = await fetch("https://api.openai.com/v1/chatkit/sessions", {
