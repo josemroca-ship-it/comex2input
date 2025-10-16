@@ -187,5 +187,31 @@
       locale: "es-ES"
     });
   </script>
+  <script type="module">
+  // ... tu init anterior ...
+
+  const statusEl = document.createElement('div');
+  statusEl.style.cssText = "margin:8px 0 0;color:#666;font-size:12px";
+  statusEl.id = "diag-attachments";
+  document.querySelector('.card').insertBefore(statusEl, document.querySelector('#uploadBlock'));
+
+  chat.addEventListener('chatkit.ready', () => console.log('✅ chatkit.ready'));
+  chat.addEventListener('chatkit.error', e => console.error('❌ chatkit.error', e.detail || e));
+
+  chat.addEventListener('chatkit.state', (evt) => {
+    // Imprime TODO para inspección
+    console.log('ℹ️ chatkit.state', evt.detail);
+    try {
+      const composer = evt.detail?.composer || {};
+      const attachmentsEnabled =
+        composer.attachmentsEnabled ??
+        composer.attachments_enabled ??
+        composer.attachments?.enabled ??
+        false;
+
+      statusEl.textContent = `Adjuntos (clip): ${attachmentsEnabled ? 'HABILITADOS' : 'NO habilitados'}`;
+    } catch {}
+  });
+</script>
 </body>
 </html>
