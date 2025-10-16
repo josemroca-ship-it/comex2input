@@ -12,6 +12,8 @@ export async function onRequestPost({ request, env }) {
       workflow: { id: env.CHATKIT_WORKFLOW_ID },
       ...(env.CHATKIT_WORKFLOW_VERSION ? { version: env.CHATKIT_WORKFLOW_VERSION } : {}),
       user: uid
+      chatkit_configuration: {
+        file_upload: { enabled: true }
     };
 
     const r = await fetch("https://api.openai.com/v1/chatkit/sessions", {
