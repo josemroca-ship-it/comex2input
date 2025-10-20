@@ -145,76 +145,64 @@
 
   <!-- Script principal -->
   <script type="module">
-    // Esperar a que el componente esté definido
-    await customElements.whenDefined('openai-chatkit');
+  // ... tu init de ChatKit arriba ...
 
-    async function getClientSecret(existing) {
-      const url = existing ? "/api/chatkit/refresh" : "/api/chatkit/start";
-      const res = await fetch(url + (existing ? "" : "?reset=1"), {
+  const input = document.getElementById("fileInput");
+  const status = document.getElementById("uploadStatus");
+
+  input.addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    status.textContent = "Subiendo " + file.name + "…";
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      // 1) Subir
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+
+      if (!uploadRes.ok) {
+        const err = await uploadRes.text();     // <-- NO json() si no ok
+        status.textContent = "❌ Error subiendo: " + err;
+        return;
+      }
+
+      const uploadData = await uploadRes.json(); // <-- aquí sí
+      if (!uploadData?.file_id) {
+        status.textContent = "❌ Upload sin file_id";
+        return;
+      }
+
+      status.textContent = "📤 Archivo subido. Procesando…";
+
+      // 2) Continuar flujo con ese file_id (Responses API)
+      const continueRes = await fetch("/api/continue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: existing ? JSON.stringify({ currentClientSecret: existing }) : null
+        body: JSON.stringify({ file_id: uploadData.file_id })
       });
-      if (!res.ok) throw new Error(`Token ${res.status}: ${await res.text()}`);
-      const { client_secret } = await res.json();
-      return client_secret;
-    }
 
-    const chat = document.getElementById("chat");
-    chat.setOptions({
-      api: { getClientSecret },
-      locale: "es-ES"
-    });
-
-    // Logs
-    chat.addEventListener('chatkit.ready', () => console.log('✅ chatkit.ready'));
-    chat.addEventListener('chatkit.error', e => console.error('❌ chatkit.error', e.detail || e));
-    chat.addEventListener('chatkit.state', e => console.log('ℹ️ state', e.detail));
-
-    // --- Uploader ---
-    const input = document.getElementById("fileInput");
-    const status = document.getElementById("uploadStatus");
-
-    input.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      status.textContent = "Subiendo " + file.name + "...";
-
-      const formData = new FormData();
-      formData.append("file", file);
-
-      try {
-        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-        const uploadData = await uploadRes.json();
-
-        if (!uploadRes.ok) {
-          status.textContent = "❌ Error subiendo archivo";
-          console.error(uploadData);
-          return;
-        }
-
-        status.textContent = "📤 Archivo subido. Procesando...";
-
-        const continueRes = await fetch("/api/continue", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ file_id: uploadData.file_id }),
-        });
-
-        const result = await continueRes.json();
-        console.log("Resultado workflow:", result);
-
-        status.textContent = "✅ Procesado correctamente";
-        const msg = document.createElement("div");
-        msg.style.marginTop = "10px";
-        msg.textContent = "Respuesta de la IA: " + (result.output_text || JSON.stringify(result));
-        document.querySelector(".card").appendChild(msg);
-      } catch (err) {
-        status.textContent = "❌ Error al procesar: " + err.message;
-        console.error(err);
+      if (!continueRes.ok) {
+        const err = await continueRes.text();
+        status.textContent = "❌ Error procesando: " + err;
+        return;
       }
-    });
-  </script>
+
+      const data = await continueRes.json();
+      const reply = data.reply || "(sin respuesta)";
+      status.textContent = "✅ Procesado correctamente";
+
+      // Mostrar respuesta bajo la tarjeta
+      const msg = document.createElement("div");
+      msg.style.marginTop = "10px";
+      msg.textContent = "Respuesta de la IA: " + reply;
+      document.querySelector(".card").appendChild(msg);
+    } catch (err) {
+      status.textContent = "❌ Error de red: " + (err?.message || err);
+      console.error(err);
+    }
+  });
+</script>
 </body>
 </html>
