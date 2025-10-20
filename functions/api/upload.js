@@ -16,11 +16,10 @@ export async function onRequestPost({ request, env }) {
       });
     }
 
-    // Reempaquetar el archivo (evita problemas de boundary)
+    // Reempaquetamos para asegurar boundary correcto y añadimos purpose
     const fd = new FormData();
     fd.append("file", new Blob([await file.arrayBuffer()], { type: file.type }), file.name || "document.pdf");
-    // Si tu cuenta lo requiere, podrías añadir purpose:
-    // fd.append("purpose", "assistants");
+    fd.append("purpose", "assistants"); // ← REQUIRED
 
     const r = await fetch("https://api.openai.com/v1/files", {
       method: "POST",
