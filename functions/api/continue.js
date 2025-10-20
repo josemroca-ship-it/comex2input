@@ -1,34 +1,65 @@
+// functions/api/continue.js
 export async function onRequestPost({ request, env }) {
   try {
-    const { OPENAI_API_KEY, CHATKIT_WORKFLOW_ID, CHATKIT_WORKFLOW_VERSION } = env;
-    const { file_id, user } = await request.json();
+    const { OPENAI_API_KEY, CHATKIT_WORKFLOW_ID, CHATKIT_WORKFLOW_VERSION, OPENAI_MODEL } = env;
+    if (!OPENAI_API_KEY) {
+      return new Response(JSON.stringify({ error: "Missing OPENAI_API_KEY" }), {
+        status: 500, headers: { "Content-Type": "application/json" }
+      });
+    }
 
-    if (!file_id) return new Response("Falta file_id", { status: 400 });
+    const { file_id, text } = await request.json().catch(() => ({}));
+    if (!file_id) {
+      return new Response(JSON.stringify({ error: "Missing file_id" }), {
+        status: 400, headers: { "Content-Type": "application/json" }
+      });
+    }
 
-    const body = {
-      workflow: CHATKIT_WORKFLOW_VERSION
-        ? { id: CHATKIT_WORKFLOW_ID, version: CHATKIT_WORKFLOW_VERSION }
-        : { id: CHATKIT_WORKFLOW_ID },
-      user: user || "web-" + crypto.randomUUID(),
-      input: `Procesa el archivo con ID ${file_id} y extrae los datos relevantes.`,
-      attachments: [{ file_id }],
-    };
+    // Construimos input para Responses API: texto opcional + input_file
+    const input = [];
+    if (text) input.push({ role: "user", content: [{ type: "input_text", text }] });
+    input.push({ role: "user", content: [{ type: "input_file", file_id }] });
 
-    const res = await fetch("https://api.openai.com/v1/workflows/runs", {
+    // Si tienes workflow, úsalo; si no, usa model
+    const payload = CHATKIT_WORKFLOW_ID
+      ? {
+          workflow: CHATKIT_WORKFLOW_VERSION
+            ? { id: CHATKIT_WORKFLOW_ID, version: CHATKIT_WORKFLOW_VERSION }
+            : { id: CHATKIT_WORKFLOW_ID },
+          input
+        }
+      : {
+          model: OPENAI_MODEL || "gpt-4.1-mini",
+          input
+        };
+
+    const r = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
+        "Content-Type": "application/json"
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
-    return new Response(JSON.stringify(data), {
-      headers: { "Content-Type": "application/json" },
-      status: res.status,
+    const txt = await r.text();
+    if (!r.ok) {
+      return new Response(JSON.stringify({ error: `OpenAI ${r.status}: ${txt}` }), {
+        status: r.status, headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const data = JSON.parse(txt || "{}");
+    const reply = data.output_text
+      || data.output?.[0]?.content?.[0]?.text
+      || "(sin respuesta)";
+
+    return new Response(JSON.stringify({ reply, raw: data }), {
+      headers: { "Content-Type": "application/json" }
     });
-  } catch (err) {
-    return new Response("Error ejecutando workflow: " + err.message, { status: 500 });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: e?.message || String(e) }), {
+      status: 500, headers: { "Content-Type": "application/json" }
+    });
   }
 }
