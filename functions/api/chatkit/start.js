@@ -21,7 +21,7 @@ export async function onRequestPost({ request, env }) {
         : { id: CHATKIT_WORKFLOW_ID },
       user: uid,
 
-      // ✅ Activar adjuntos nativos en el compositor
+      // ✅ Activar adjuntos nativos en el compositor2
       chatkit_configuration: {
         file_upload: {
           enabled: true
