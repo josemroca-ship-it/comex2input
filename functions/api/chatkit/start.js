@@ -26,7 +26,7 @@ export async function onRequestPost({ request, env }) {
         file_upload: {
           enabled: true
           // Opcional:
-          accept: ["application/pdf", "image/*"],
+          // accept: ["application/pdf", "image/*"],
           // max_files: 3,
           // multiple: true
         }
