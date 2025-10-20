@@ -68,7 +68,6 @@
       padding: 16px;
     }
 
-    /* Host del ChatKit (modo embebido) */
     openai-chatkit {
       display: block;
       width: 100%;
@@ -77,6 +76,30 @@
       background: #fff;
       border: 1px solid #ccc;
       overflow: clip;
+    }
+
+    /* Uploader */
+    #uploader {
+      text-align: center;
+      margin-top: 16px;
+    }
+    #fileLabel {
+      display: inline-block;
+      padding: 10px 16px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      cursor: pointer;
+      background: var(--brand);
+      color: #fff;
+      transition: background 0.2s;
+    }
+    #fileLabel:hover {
+      background: #3ab1f5;
+    }
+    #uploadStatus {
+      margin-top: 8px;
+      font-size: 0.9rem;
+      color: #555;
     }
 
     /* Footer */
@@ -97,7 +120,7 @@
   </style>
 </head>
 <body>
-  <!-- Header con logo -->
+  <!-- Header -->
   <div class="header brand">
     <img src="https://megafy.net/wp-content/uploads/2022/06/logo-megafy-footer.png" alt="Logo Megafy" />
     <div>
@@ -106,27 +129,25 @@
     </div>
   </div>
 
-  <!-- Card con el chat -->
+  <!-- Card -->
   <div class="card">
     <openai-chatkit id="chat"></openai-chatkit>
-  </div>
 
-  <div id="uploader" style="margin-top:16px; text-align:center;">
-  <label for="fileInput" style="display:inline-block; padding:10px 16px; border:1px solid #ccc; border-radius:8px; cursor:pointer; background:#4cc2ff; color:#fff;">
-    📎 Subir PDF
-  </label>
-  <input type="file" id="fileInput" accept="application/pdf" style="display:none;" />
-  <div id="uploadStatus" style="margin-top:8px; font-size:0.9rem;"></div>
-</div>
+    <!-- Uploader -->
+    <div id="uploader">
+      <label id="fileLabel" for="fileInput">📎 Subir PDF</label>
+      <input type="file" id="fileInput" accept="application/pdf" style="display:none;" />
+      <div id="uploadStatus"></div>
+    </div>
+  </div>
 
   <div class="footer">Desarrollado con 🧠 x Megafy</div>
 
   <!-- Script principal -->
   <script type="module">
-    // Esperamos a que el componente esté listo
+    // Esperar a que el componente esté definido
     await customElements.whenDefined('openai-chatkit');
 
-    // Función para obtener el client_secret desde tu backend
     async function getClientSecret(existing) {
       const url = existing ? "/api/chatkit/refresh" : "/api/chatkit/start";
       const res = await fetch(url + (existing ? "" : "?reset=1"), {
@@ -145,54 +166,55 @@
       locale: "es-ES"
     });
 
-    // Diagnóstico en consola
+    // Logs
     chat.addEventListener('chatkit.ready', () => console.log('✅ chatkit.ready'));
-    chat.addEventListener('chatkit.error', (e) => console.error('❌ chatkit.error', e.detail || e));
-    chat.addEventListener('chatkit.state', (e) => console.log('ℹ️ state', e.detail));
+    chat.addEventListener('chatkit.error', e => console.error('❌ chatkit.error', e.detail || e));
+    chat.addEventListener('chatkit.state', e => console.log('ℹ️ state', e.detail));
 
-// --- Manejador del uploader ---
-const input = document.getElementById("fileInput");
-const status = document.getElementById("uploadStatus");
+    // --- Uploader ---
+    const input = document.getElementById("fileInput");
+    const status = document.getElementById("uploadStatus");
 
-input.addEventListener("change", async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  status.textContent = "Subiendo " + file.name + "...";
+    input.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-  const formData = new FormData();
-  formData.append("file", file);
+      status.textContent = "Subiendo " + file.name + "...";
 
-  const res = await fetch("/api/upload", { method: "POST", body: formData });
-  const data = await res.json();
+      const formData = new FormData();
+      formData.append("file", file);
 
-  if (!res.ok) {
-    status.textContent = "❌ Error subiendo archivo";
-    console.error(data);
-    return;
-  }
+      try {
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const uploadData = await uploadRes.json();
 
-  status.textContent = "📤 Archivo subido, procesando...";
+        if (!uploadRes.ok) {
+          status.textContent = "❌ Error subiendo archivo";
+          console.error(uploadData);
+          return;
+        }
 
-  // Ejecutar el workflow con ese file_id
-  const continueRes = await fetch("/api/continue", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ file_id: data.file_id }),
-  });
+        status.textContent = "📤 Archivo subido. Procesando...";
 
-  const result = await continueRes.json();
-  console.log("Resultado workflow:", result);
-  status.textContent = "✅ Procesado correctamente";
+        const continueRes = await fetch("/api/continue", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ file_id: uploadData.file_id }),
+        });
 
-  // Insertar resultado como mensaje visual (placeholder)
-  const msg = document.createElement("div");
-  msg.textContent = "Respuesta de la IA: " + (result.output_text || "Ver consola");
-  document.querySelector(".card").appendChild(msg);
-});
-    
+        const result = await continueRes.json();
+        console.log("Resultado workflow:", result);
 
-
-    
+        status.textContent = "✅ Procesado correctamente";
+        const msg = document.createElement("div");
+        msg.style.marginTop = "10px";
+        msg.textContent = "Respuesta de la IA: " + (result.output_text || JSON.stringify(result));
+        document.querySelector(".card").appendChild(msg);
+      } catch (err) {
+        status.textContent = "❌ Error al procesar: " + err.message;
+        console.error(err);
+      }
+    });
   </script>
 </body>
 </html>
