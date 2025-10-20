@@ -1,24 +1,146 @@
-await customElements.whenDefined('openai-chatkit');
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>AI Megafy - COMEX</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-async function getClientSecret(existing) {
-  const url = existing ? "/api/chatkit/refresh" : "/api/chatkit/start";
-  const res = await fetch(url + (existing ? "" : "?reset=1"), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: existing ? JSON.stringify({ currentClientSecret: existing }) : null
-  });
-  if (!res.ok) throw new Error(`Token ${res.status}: ${await res.text()}`);
-  const { client_secret } = await res.json();
-  return client_secret;
-}
+  <!-- Carga del Web Component de ChatKit -->
+  <script src="https://cdn.platform.openai.com/deployments/chatkit/chatkit.js" defer></script>
 
-const chat = document.getElementById("chat");
-chat.setOptions({
-  api: { getClientSecret },
-  locale: "es-ES"
-});
+  <style>
+    :root {
+      --w: 1000px;
+      --dark-bg: #0a1422;
+      --light-bg: #ffffff;
+      --text-dark: #e8eef7;
+      --text-light: #333;
+      --brand: #4cc2ff;
+    }
 
-// Logs de diagnóstico
-chat.addEventListener('chatkit.ready',  () => console.log('✅ chatkit.ready'));
-chat.addEventListener('chatkit.error',  e => console.error('❌ chatkit.error', e.detail || e));
-chat.addEventListener('chatkit.state',  e => console.log('ℹ️ state', e.detail));
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; font-family: system-ui, sans-serif; }
+
+    body {
+      background: var(--light-bg);
+      color: var(--text-light);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      padding: 24px;
+    }
+
+    /* Header */
+    .header {
+      width: 100%;
+      max-width: var(--w);
+      background: var(--dark-bg);
+      color: var(--text-dark);
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.35);
+    }
+
+    .brand img {
+      height: 40px;
+      filter: drop-shadow(0 2px 6px rgba(0,0,0,0.35));
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 1.25rem;
+      letter-spacing: .2px;
+      font-weight: 600;
+    }
+    .sub { color: #a9b4c0; font-size: .95rem; }
+
+    /* Card contenedora */
+    .card {
+      width: 100%;
+      max-width: var(--w);
+      border-radius: 16px;
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      padding: 16px;
+    }
+
+    /* Host del ChatKit (modo embebido) */
+    openai-chatkit {
+      display: block;
+      width: 100%;
+      height: clamp(520px, 70vh, 720px);
+      border-radius: 12px;
+      background: #fff;
+      border: 1px solid #ccc;
+      overflow: clip;
+    }
+
+    /* Footer */
+    .footer {
+      width: 100%;
+      max-width: var(--w);
+      text-align: center;
+      color: #777;
+      font-size: .9rem;
+    }
+
+    @media (max-width: 560px) {
+      .brand h1 { font-size: 1.05rem; }
+      .sub { font-size: .85rem; }
+      body { padding: 16px; gap: 16px; }
+      .card { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header con logo -->
+  <div class="header brand">
+    <img src="https://megafy.net/wp-content/uploads/2022/06/logo-megafy-footer.png" alt="Logo Megafy" />
+    <div>
+      <h1>AI Megafy - COMEX 2</h1>
+      <div class="sub">Tu copiloto inteligente, 24/7</div>
+    </div>
+  </div>
+
+  <!-- Card con el chat -->
+  <div class="card">
+    <openai-chatkit id="chat"></openai-chatkit>
+  </div>
+
+  <div class="footer">Desarrollado con 🧠 x Megafy</div>
+
+  <!-- Script principal -->
+  <script type="module">
+    // Esperamos a que el componente esté listo
+    await customElements.whenDefined('openai-chatkit');
+
+    // Función para obtener el client_secret desde tu backend
+    async function getClientSecret(existing) {
+      const url = existing ? "/api/chatkit/refresh" : "/api/chatkit/start";
+      const res = await fetch(url + (existing ? "" : "?reset=1"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: existing ? JSON.stringify({ currentClientSecret: existing }) : null
+      });
+      if (!res.ok) throw new Error(`Token ${res.status}: ${await res.text()}`);
+      const { client_secret } = await res.json();
+      return client_secret;
+    }
+
+    const chat = document.getElementById("chat");
+    chat.setOptions({
+      api: { getClientSecret },
+      locale: "es-ES"
+    });
+
+    // Diagnóstico en consola
+    chat.addEventListener('chatkit.ready', () => console.log('✅ chatkit.ready'));
+    chat.addEventListener('chatkit.error', (e) => console.error('❌ chatkit.error', e.detail || e));
+    chat.addEventListener('chatkit.state', (e) => console.log('ℹ️ state', e.detail));
+  </script>
+</body>
+</html>
