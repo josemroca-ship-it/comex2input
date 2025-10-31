@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laboratorio AI - Megafy</title>
+
+  <!-- Estilos -->
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: "Inter", system-ui, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 20% 20%, #0f172a, #1e293b);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    header img {
+      width: 180px;
+      height: auto;
+      margin-bottom: 30px;
+      filter: drop-shadow(0 0 8px rgba(255,255,255,0.2));
+    }
+
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+    }
+
+    p {
+      font-size: 1.1rem;
+      opacity: 0.85;
+      max-width: 500px;
+      line-height: 1.5;
+    }
+
+    footer {
+      position: absolute;
+      bottom: 10px;
+      font-size: 0.85rem;
+      opacity: 0.6;
+      letter-spacing: 0.3px;
+    }
+
+    /* Botón flotante */
+    .chat-button {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background-color: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      font-size: 28px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      transition: all 0.3s ease;
+      z-index: 9999;
+    }
+
+    .chat-button:hover {
+      background-color: #2563eb;
+      transform: scale(1.07);
+    }
+
+    /* Iframe del chatbot */
+    .chat-iframe {
+      position: fixed;
+      bottom: 90px;
+      right: 24px;
+      width: 400px;
+      height: 600px;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.5);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: all 0.35s ease;
+      z-index: 9998;
+    }
+
+    .chat-iframe.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 480px) {
+      .chat-iframe {
+        width: 90%;
+        height: 80%;
+        right: 5%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <img src="https://megafy.net/wp-content/uploads/2022/06/logo-megafy-footer.png" alt="Logo Megafy" />
+  </header>
+
+  <main>
+    <h1>Bienvenido al Laboratorio AI de Megafy</h1>
+    <p>Explorando el futuro con inteligencia artificial y desarrollo avanzado.</p>
+  </main>
+
+  <footer>
+    Creado con 🧠 x Megafy
+  </footer>
+
+  <!-- Botón y chatbot -->
+  <button id="chatBtn" class="chat-button">💬</button>
+  <iframe
+    id="chatFrame"
+    class="chat-iframe"
+    src="https://openai-chatkit-starter-7wtghdvcj-megafys-projects.vercel.app/"
+  ></iframe>
+
+  <script>
+    const chatBtn = document.getElementById('chatBtn');
+    const chatFrame = document.getElementById('chatFrame');
+
+    chatBtn.addEventListener('click', () => {
+      chatFrame.classList.toggle('active');
+    });
+  </script>
+</body>
+</html>
